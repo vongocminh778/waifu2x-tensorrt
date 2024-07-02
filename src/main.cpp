@@ -186,6 +186,8 @@ int main(int argc, char *argv[]) {
 
         cv::Mat frame;
         cv::Mat outputFrame;
+        double fps = 0.0;
+        double tick_frequency = cv::getTickFrequency();
         while (true) {
             cap >> frame;
             if (frame.empty()) {
@@ -194,15 +196,23 @@ int main(int argc, char *argv[]) {
             }
 
             outputFrame.create(frame.rows * scale, frame.cols * scale, frame.type());
-
+            int64 frame_tick = cv::getTickCount();
             if (!engine.render(frame, outputFrame))
                 return -1;
+            int64 end_tick = cv::getTickCount();
+            double frame_time = (end_tick - frame_tick) / tick_frequency;
+            fps = 1.0 / frame_time;
+            
+            cv::Mat scaledFrame;
+            cv::resize(frame, scaledFrame, cv::Size(frame.cols * 2, frame.rows * 2));
+
+            // Display FPS on frame
+            putText(outputFrame, "FPS: " + std::to_string(fps), cv::Point(10, 30), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(255, 255, 255), 2);
+            cv::imshow("Original Scaled", scaledFrame);
 
             cv::imshow("Output", outputFrame);
             if (cv::waitKey(1) == 27) // Exit on ESC key
                 break;
-
-            // frameIndex++;
         }
         cap.release();
     } else if (build->parsed()) {
