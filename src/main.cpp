@@ -1,13 +1,12 @@
+#include <iostream>
+#include <filesystem>
+#include <opencv2/opencv.hpp>
+#include <CLI/CLI.hpp>
+#include <spdlog/spdlog.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
+#include "tensorrt/img2img.h"
 #include "tensorrt/img2img.h"
 #include "utilities/path.h"
-#include "videoio/capture.h"
-#include "videoio/writer.h"
-#include <CLI/CLI.hpp>
-#include <opencv2/opencv.hpp>
-#include <iostream>
-
-#define SPDLOG_LEVEL_NAMES { "TRACE", "DEBUG", "INFO ", "WARN ", "ERROR", "FATAL", "OFF" }
-#include <spdlog/sinks/stdout_color_sinks.h>
 
 int main(int argc, char *argv[]) {
     auto console = spdlog::stdout_color_mt("console");
@@ -27,7 +26,8 @@ int main(int argc, char *argv[]) {
         "cunet/art",
         "swin_unet/art",
         "swin_unet/art_scan",
-        "swin_unet/photo"
+        "swin_unet/photo",
+        "upconv_7/photo"
     };
     app.add_option("--model", model)
         ->description("Set the model to use")
@@ -85,11 +85,11 @@ int main(int argc, char *argv[]) {
 
     auto render = app.add_subcommand("render", "Render image(s)/video(s)");
 
-    std::vector<std::filesystem::path> inputPaths;
-    render->add_option("-i, --input", inputPaths)
-        ->description("Set the input paths")
-        ->check(CLI::ExistingPath)
-        ->required();
+    // std::vector<std::filesystem::path> inputPaths;
+    // render->add_option("-i, --input", inputPaths)
+    //     ->description("Set the input paths")
+    //     ->check(CLI::ExistingPath)
+    //     ->required();
 
     bool recursive = false;
     render->add_flag("--recursive", recursive)
@@ -148,50 +148,7 @@ int main(int argc, char *argv[]) {
     };
     // endregion
 
-    const std::vector<std::string> extensions = {
-        ".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff",
-        ".mp4", ".avi", ".mkv", ".avi"
-    };
-    auto files = utils::findFilesByExtension(inputPaths, extensions, recursive);
-
-    // region Console callbacks
-    trt::MessageCallback messageCallback = [&console](trt::Severity severity, const std::string& message) {
-        switch (severity) {
-            case trt::Severity::critical:
-                console->critical(message);
-                break;
-            case trt::Severity::error:
-                console->error(message);
-                break;
-            case trt::Severity::warn:
-                console->warn(message);
-                break;
-            case trt::Severity::info:
-                console->info(message);
-                break;
-            case trt::Severity::debug:
-                console->debug(message);
-                break;
-            case trt::Severity::trace:
-                console->trace(message);
-                break;
-        }
-    };
-
-    size_t fileIndex = 0;
-    size_t fileCount = files.size();
-    size_t frameIndex = 0;
-    size_t frameCount = 0;
-    trt::ProgressCallback progressCallback =
-        [&console, &fileIndex, &fileCount, &frameIndex, &frameCount] (int current, int total, double speed) {
-        console->info("Rendered file {}/{}, frame {}/{}, batch {}/{} @ {:.2f} it/s",
-            fileIndex, fileCount, frameIndex, frameCount, current, total, speed);
-    };
-    // endregion
-
     trt::Img2Img engine;
-    engine.setMessageCallback(messageCallback);
-    engine.setProgressCallback(progressCallback);
 
     const auto modelPath = "models/" + model + "/"
         + (noise == -1 ? "" : "noise" + std::to_string(noise) + "_")
@@ -218,51 +175,36 @@ int main(int argc, char *argv[]) {
 
         if (!engine.load(modelPath, config))
             return -1;
-        VideoCapture capture;
-        VideoWriter writer;
-        cv::Mat inputFrame;
-        cv::Mat outputFrame;
 
-        writer.setConstantRateFactor(crf);
-        for (auto& file : files) {
-            capture.open(file.string());
-            inputFrame.create(capture.getFrameSize(), CV_8UC3);
-            outputFrame.create(capture.getFrameSize() * scale, CV_8UC3);
-
-            frameIndex = 0;
-            frameCount = capture.getFrameCount();
-
-            if (!outputDirectory.empty()) {
-                file = outputDirectory / file.filename();
-            }
-            file.replace_filename(file.stem().string() + suffix);
-            if (frameCount == 1) {
-                file.replace_extension(".png");
-                writer.setFrameRate(1)
-                    .setPixelFormat("")
-                    .setCodec("");
-            } else {
-                file.replace_extension(".mp4");
-                writer.setFrameRate(capture.getFrameRate())
-                    .setPixelFormat(pixelFormat)
-                    .setCodec(codec);
-            }
-            writer.setFrameSize(outputFrame.size());
-            writer.setOutputFile(file.string());
-            writer.open();
-
-            for (auto i = 0; i < frameCount; i++) {
-                capture.read(inputFrame);
-                if (!engine.render(inputFrame, outputFrame))
-                    return -1;
-                writer.write(outputFrame);
-                frameIndex++;
-            }
-            capture.release();
-            writer.release();
-
-            fileIndex++;
+        cv::VideoCapture cap(0);
+        cap.set(cv::CAP_PROP_FRAME_WIDTH, 640);
+        cap.set(cv::CAP_PROP_FRAME_HEIGHT, 480);
+        if (!cap.isOpened()) {
+            console->error("Unable to open camera");
+            return -1;
         }
+
+        cv::Mat frame;
+        cv::Mat outputFrame;
+        while (true) {
+            cap >> frame;
+            if (frame.empty()) {
+                console->error("Empty frame captured");
+                break;
+            }
+
+            outputFrame.create(frame.rows * scale, frame.cols * scale, frame.type());
+
+            if (!engine.render(frame, outputFrame))
+                return -1;
+
+            cv::imshow("Output", outputFrame);
+            if (cv::waitKey(1) == 27) // Exit on ESC key
+                break;
+
+            // frameIndex++;
+        }
+        cap.release();
     } else if (build->parsed()) {
         trt::BuildConfig config {
             .deviceId = deviceId,
@@ -283,4 +225,6 @@ int main(int argc, char *argv[]) {
         if (!engine.build(modelPath, config))
             return -1;
     }
+
+    return 0;
 }

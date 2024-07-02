@@ -10,7 +10,7 @@
 #define pclose _pclose
 #endif
 
-VideoCapture::VideoCapture() noexcept = default;
+VideoCapture::VideoCapture() = default;
 
 VideoCapture::~VideoCapture() {
     release();
@@ -129,7 +129,7 @@ bool VideoCapture::read(cv::Mat& frame) {
 
 void VideoCapture::release() {
     if (pipe)
-        _pclose(pipe);
+        pclose(pipe);
     pipe = nullptr;
     opened = false;
 

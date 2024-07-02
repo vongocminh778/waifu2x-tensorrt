@@ -72,14 +72,14 @@ build
 ### Building a model
 Before being able to upscale an image or a video using a particular configuration, the model needs to be built into an optimized engine. To do so, use the build subcommand and specify the model, the scale, the noise, the batch size, and the tile size: 
 ```
-waifu2x-tensorrt build --model swin_unet/art --scale 4 --noise 3 --batchSize 4 --tileSize 256
+./waifu2x-tensorrt build --model swin_unet/art --scale 4 --noise 3 --batchSize 4 --tileSize 256
 ```
 Depending on the configuration, this process might take a couple of minutes to complete, and TensorRT might fail if VRAM is insufficient. 
 
 ### Upscaling an image/video
 To upscale an image and/or a video, use the render subcommand and specify the upscaling configuration and input files:
 ```
-waifu2x-tensorrt render --model swin_unet/art --scale 4 --noise 3 --batchSize 4 --tileSize 256 --input path/to/file1.png path/to/file2.mp4 path/to/files
+./waifu2x-tensorrt render --model upconv_7/photo --scale 2 --noise 3 --batchSize 4 --tileSize 256
 ```
 
 ## Contributing

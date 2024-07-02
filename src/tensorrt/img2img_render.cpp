@@ -251,10 +251,8 @@ bool trt::Img2Img::render(const cv::Mat& src, cv::Mat& dst) try {
 
     // Tile buffers and indices
     std::queue<std::tuple<int, int>> tileIndices;
-    std::vector<cv::cuda::GpuMat> inputTiles;
-    std::vector<cv::cuda::GpuMat> outputTiles;
-    inputTiles.reserve(batchSize);
-    outputTiles.reserve(batchSize);
+    std::vector<cv::cuda::GpuMat> inputTiles(batchSize);
+    std::vector<cv::cuda::GpuMat> outputTiles(batchSize);
 
     // Render image
     for (auto stepIndex = 0; stepIndex < stepCount; ++stepIndex) {
@@ -273,12 +271,12 @@ bool trt::Img2Img::render(const cv::Mat& src, cv::Mat& dst) try {
                 auto& ttaInputTile = ttaInputTiles[batchIndex];
                 applyAugmentation(inputTile, ttaInputTile, inputTileSize,
                     tmpInputMat, augmentationIndex, stream);
-                inputTiles.emplace_back(ttaInputTile);
+                inputTiles[batchIndex] = ttaInputTile;
             } else {
-                inputTiles.emplace_back(inputTile);
+                inputTiles[batchIndex] = inputTile;
             }
         } else {
-            inputTiles.emplace_back(inputTileSize, CV_32FC3, cv::Scalar(0, 0, 0));
+            inputTiles[batchIndex] = cv::cuda::GpuMat(inputTileSize, CV_32FC3, cv::Scalar(0, 0, 0));
         }
 
         // Check if batch is full
@@ -329,8 +327,6 @@ bool trt::Img2Img::render(const cv::Mat& src, cv::Mat& dst) try {
             cv::cuda::add((*outputTile)(cv::Rect2i(0, 0, outputTileRect.width, outputTileRect.height)),
                 output(outputTileRect), output(outputTileRect), cv::noArray(), -1, stream);
         }
-        // Clear batch
-        inputTiles.clear();
 
         // Log progress
         const auto t1 = std::chrono::steady_clock::now();

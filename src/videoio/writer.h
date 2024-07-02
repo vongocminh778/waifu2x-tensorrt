@@ -6,7 +6,7 @@
 
 class VideoWriter {
 public:
-    VideoWriter() noexcept;
+    VideoWriter();
     virtual ~VideoWriter() noexcept;
     void open();
     [[nodiscard]] bool isOpened() const noexcept;

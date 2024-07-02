@@ -1,12 +1,26 @@
 cmake_minimum_required(VERSION 3.26)
 project(waifu2x-tensorrt)
 
+# Set the debug flags
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g")
+
+# Optionally, you can also set other relevant debug options
+set(CMAKE_BUILD_TYPE Debug)
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 
+set(TensorRT_DIR /home/minhvo/Downloads/TensorRT-8.6.1.6.Linux.x86_64-gnu.cuda-11.8/TensorRT-8.6.1.6)
+set(TENSORRT_LIBRARY_PATH /home/minhvo/Downloads/TensorRT-8.6.1.6.Linux.x86_64-gnu.cuda-11.8/TensorRT-8.6.1.6/targets/x86_64-linux-gnu/lib)
+set(OpenCV_DIR "/home/minhvo/Downloads/opencv/build") # opencv 4.8
 find_package(TensorRT REQUIRED)
 find_package(CUDA REQUIRED)
 find_package(OpenCV REQUIRED)
+
+# Append TensorRT library path to LD_LIBRARY_PATH
+execute_process(
+    COMMAND ${CMAKE_COMMAND} -E env "LD_LIBRARY_PATH=${TENSORRT_LIBRARY_PATH}:$ENV{LD_LIBRARY_PATH}"
+)
 
 # spdlog
 include(FetchContent)

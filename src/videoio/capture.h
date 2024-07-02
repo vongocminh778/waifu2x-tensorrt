@@ -5,7 +5,7 @@
 
 class VideoCapture {
 public:
-    VideoCapture() noexcept;
+    VideoCapture();
     virtual ~VideoCapture();
     void open(const std::string& path);
     [[nodiscard]] bool isOpened() const noexcept;

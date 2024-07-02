@@ -6,7 +6,7 @@
 #define pclose _pclose
 #endif
 
-VideoWriter::VideoWriter() noexcept = default;
+VideoWriter::VideoWriter() = default;
 
 VideoWriter::~VideoWriter() noexcept {
     release();

@@ -1,0 +1,16 @@
+{
+    "deviceName": "NVIDIA GeForce GTX 1050 Ti",
+    "precision": "FP16",
+    "minBatchSize": 4,
+    "optBatchSize": 4,
+    "maxBatchSize": 4,
+    "minChannels": 3,
+    "optChannels": 3,
+    "maxChannels": 3,
+    "minWidth": 256,
+    "optWidth": 256,
+    "maxWidth": 256,
+    "minHeight": 256,
+    "optHeight": 256,
+    "maxHeight": 256
+}
